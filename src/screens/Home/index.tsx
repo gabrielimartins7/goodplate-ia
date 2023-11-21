@@ -3,6 +3,8 @@ import { Alert, Image, ScrollView, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 
+import { api } from '../../services/api';
+
 import { styles } from './styles';
 
 import { Tip } from '../../components/Tip';
@@ -54,12 +56,12 @@ export function Home() {
    }
 
   async function foodDetect(imageBase64: string | undefined) {
-
+    const response = await api.post(`/v2/models/general-image-recognition/versions/`)
   }
 
   return (
     <View style={styles.container}>
-      <Button onPress={handleSelectImage} />
+      <Button onPress={handleSelectImage} disabled={isLoading} />
 
       {
         selectedImageUri ?
