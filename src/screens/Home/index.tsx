@@ -11,6 +11,7 @@ import { Button } from '../../components/Button';
 
 export function Home() {
   const [selectedImageUri, setSelectedImageUri] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleSelectImage() {
     try {
@@ -20,6 +21,8 @@ export function Home() {
         return Alert.alert("É necessário conceder permissão para acessar seu álbum!");
       }
 
+      setIsLoading(true);
+
       const response = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -28,16 +31,31 @@ export function Home() {
       });
 
       if(response.canceled){
-        return;
+        return setIsLoading(false);
       }
 
       if(!response.canceled){
-        setSelectedImageUri(response.assets[0].uri);
+        const imgManipuled = await ImageManipulator.manipulateAsync(
+          response.assets[0].uri,
+          [{ resize: { width: 900 }}],
+          {
+            compress: 1,
+            format: ImageManipulator.SaveFormat.JPEG,
+            base64: true
+          }
+        );
+
+        setSelectedImageUri(imgManipuled.uri);
+        foodDetect(imgManipuled.base64);
       }
     } catch (error) {
       console.log(error);
     }
    }
+
+  async function foodDetect(imageBase64: string | undefined) {
+
+  }
 
   return (
     <View style={styles.container}>
