@@ -4,16 +4,20 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 import { api } from '../../services/api';
+import { foodContains } from '../../utils/foodContains';
 
 import { styles } from './styles';
 
 import { Tip } from '../../components/Tip';
-import { Item } from '../../components/Item';
+import { Item, ItemProps } from '../../components/Item';
 import { Button } from '../../components/Button';
+import { Loading } from '../../components/Loading';
 
 export function Home() {
   const [selectedImageUri, setSelectedImageUri] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [items, setItems] = useState<ItemProps[]>([]);
+  const [message, setMessage] = useState('');
 
   async function handleSelectImage() {
     try {
@@ -56,7 +60,34 @@ export function Home() {
    }
 
   async function foodDetect(imageBase64: string | undefined) {
-    const response = await api.post(`/v2/models/general-image-recognition/versions/`)
+    const response = await api.post(`/v2/models/${process.env.EXPO_PUBLIC_API_MODEL_ID}/versions/${process.env.EXPO_PUBLIC_API_MODEL_VERSION_ID}/outputs`, {
+      "user_app_id": {
+        "user_id": process.env.EXPO_PUBLIC_API_USER_ID,
+        "app_id": process.env.EXPO_PUBLIC_API_APP_ID
+      },
+      "inputs": [
+        {
+          "data":{
+            "image": {
+              "base64": imageBase64
+            }
+          }
+        }
+      ]
+    });
+
+    const foods = response.data.outputs[0].data.concepts.map((concept: any) => {
+      return {
+        name: concept.name,
+        percentage: `${Math.round(concept.value * 100)}%`
+      }
+    });
+
+    const isVegetable = foodContains(foods, 'Vegetable');
+    setMessage(isVegetable ? '' : 'Adicione vegetais em seu prato!');
+
+    setItems(foods);
+    setIsLoading(false);
   }
 
   return (
@@ -77,13 +108,22 @@ export function Home() {
       }
 
       <View style={styles.bottom}>
-        <Tip message="Aqui vai uma dica" />
+        {
+          isLoading ? <Loading /> :
+          <>
+            {message && <Tip message={message} />}
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 24 }}>
-          <View style={styles.items}>
-            <Item data={{ name: 'Vegetal', percentage: '95%' }} />
-          </View>
-        </ScrollView>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 24 }}>
+              <View style={styles.items}>
+                {
+                  items.map((item) => (
+                    <Item key={item.name} data={item} />
+                  ))
+                }
+              </View>
+            </ScrollView>
+          </>
+        }
       </View>
     </View>
   );
